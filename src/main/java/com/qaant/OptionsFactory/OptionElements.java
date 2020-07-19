@@ -36,9 +36,9 @@ public class OptionElements {
         return exerciseType;
     }
 
-    public void setExerciseType(char exerciseType) {
-        this.exerciseType = exerciseType;
-    }
+//    public void setExerciseType(char exerciseType) {
+//        this.exerciseType = exerciseType;
+//    }
 
     public char getOptionType() {
         return optionType;

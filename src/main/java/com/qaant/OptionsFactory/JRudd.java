@@ -4,24 +4,30 @@ public class JRudd extends AbstractModel {
 
     private boolean noLoop=false;
     private Nodo[][] tablaNodos;
-
-    public JRudd(UnderlyingAsset underlying, OptionElements option) {
-       this(underlying, option,500);
-    }
+    //private double theta2;
 
     public JRudd(UnderlyingAsset underlying, OptionElements option, boolean noLoop){
         this(underlying, option);
         this.noLoop=noLoop;
     }
 
+    public JRudd(UnderlyingAsset underlying, OptionElements option) {
+       this(underlying, option,500);
+       //si no se pasan steps hace 500 por default
+    }
+
+
+
     public JRudd(UnderlyingAsset underlying, OptionElements option, int steps) {
         super(underlying, option);
         this.steps = steps;
         modelName="Jarrow-Rudd";
+
     }
 
 
-    public Imodelable run(){
+    public Modelable run(){
+        startTime = System.currentTimeMillis();
         double h = dayYear / steps;
         double drift = (tipoContrato == 'F') ? 1 : Math.exp(rate * h);
 
@@ -51,18 +57,20 @@ public class JRudd extends AbstractModel {
             tablaNodos[steps][j].setOptionPremiumAtThisNode(
                     payoff(tablaNodos[steps][j].getUnderlyingValueAtThisNode(), strike, callPutFlag));
         }
-// Resolving tree Backward
+        // Resolving tree Backward
         double oneMinusP = 1 - p;
         double aux;
         for (int i = steps - 1; i >= 0; i--) {
 
             for (int j = 0; j <= i; j++) {
 
+
                 aux = (tablaNodos[i + 1][j].getOptionPremiumAtThisNode() * p
                         + tablaNodos[i + 1][j + 1].getOptionPremiumAtThisNode() * (oneMinusP)) * z;
 
                 tablaNodos[i][j].setOptionPremiumAtThisNode(aux);
 
+                //System.out.println(("Tipo ejercicio :"+tipoEjercicio));
                 if (tipoEjercicio == 'A') {
 
                     tablaNodos[i][j].setOptionPremiumAtThisNode(Math.max(aux,
@@ -82,45 +90,65 @@ public class JRudd extends AbstractModel {
                 /(tablaNodos[2][1].getUnderlyingValueAtThisNode()-tablaNodos[2][2].getUnderlyingValueAtThisNode()))
                 /((tablaNodos[2][0].getUnderlyingValueAtThisNode()-tablaNodos[2][2].getUnderlyingValueAtThisNode())/2);
 
-        /* esta parte anda pero hace todo mas lento
-        if (noLoop){
-           ;
-        }else {
-            theta = getTheta();
-            vega =  getVega();
-            rho =   getRho();
-        }
-       */
 
+       // theta2 = (tablaNodos[2][1].getOptionPremiumAtThisNode()-tablaNodos[0][0].getOptionPremiumAtThisNode())/(2*dayYear*365/steps);
+        //esta parte anda pero lo hace mas lento
+//        if (noLoop){
+//           ;
+//        }else {
+//            theta = getTheta();
+//            vega =  getVega();
+//            rho =   getRho();
+//        }
+
+        elapsedTime= System.currentTimeMillis()-startTime;
         return this ;
 
     }
+
+
+    private static JRudd getNewOption(UnderlyingAsset underlying, OptionElements option, int steps){
+        JRudd op= new JRudd(underlying, option, steps);
+        op.run();
+        return op;
+
+
+    }
+    @Override
     public double getTheta() {
 
         double days=option.getDaysToExpiration();
         option.setDaysToExpiration(days-1);
-        JRudd op= new JRudd(underlying, option, true);
-        op.run();
+        JRudd op=getNewOption(underlying, option,steps);
+
         option.setDaysToExpiration(days);
         return op.getPrima()-prima;
     }
 
+    @Override
     public double getVega() {
-
+        // se podria pasar un vega por BS mucha mas rapido
+        BlackScholes opt = new BlackScholes(underlying, option);
+                opt.run();
+                return opt.getVega();
+/*
+        //aca el modelo para pasar el vega correcto
         double vlt=option.getImpliedVlt();
+       // System.out.println("---Vlt-JR-"+vlt);
         option.setImpliedVlt(vlt+0.01);
-        JRudd op= new JRudd(underlying, option, true);
-        op.run();
+        JRudd op= getNewOption(underlying, option,steps);
+
         option.setImpliedVlt(vlt);
         return op.getPrima()-prima;
-
+*/
     }
+    @Override
     public double getRho() {
 
         double rate=option.getInterestRate();
         option.setInterestRate(rate+0.01);
-        JRudd op= new JRudd(underlying, option, true);
-        op.run();
+        JRudd op= getNewOption(underlying, option,steps);
+
         option.setInterestRate(rate);
         return op.getPrima()-prima;
 
@@ -128,16 +156,17 @@ public class JRudd extends AbstractModel {
 
 
 
-    public double payoff(double und, double strike, double callFlag) {
+    public static double payoff(double und, double strike, double callFlag) {
         return Math.max((und - strike) * callFlag, 0);
     }
+
     @Override
     public double getPrimaWithThisVlt(double vlt){
 
-        Imodelable jrOption = new JRudd(underlying,option.setImpliedVlt(vlt),steps).run();
+        Modelable jrOption = new JRudd(underlying,option.setImpliedVlt(vlt),steps).run();
         return jrOption.getPrima();
     }
-    private class Nodo {
+    private static class Nodo {
         private double underlyingValueAtThisNode;
         private double optionPremiumAtThisNode;
         private int nodeLevel;

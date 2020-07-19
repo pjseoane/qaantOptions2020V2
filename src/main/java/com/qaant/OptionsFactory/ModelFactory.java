@@ -3,7 +3,7 @@ package com.qaant.OptionsFactory;
 
 
 public class ModelFactory {
-    public Imodelable getModel(String modelName, UnderlyingAsset und, OptionElements opt){
+    public Modelable getModel(String modelName, UnderlyingAsset und, OptionElements opt){
         if(modelName==null){
             return null;
         }
@@ -22,7 +22,7 @@ public class ModelFactory {
         return null;
     }
 
-    public Imodelable getModel(String modelName, UnderlyingAsset und, OptionElements opt, int steps){
+    public Modelable getModel(String modelName, UnderlyingAsset und, OptionElements opt, int steps){
         if(modelName==null){
             return null;
         }

@@ -10,10 +10,10 @@ public class BlackScholes extends AbstractModel {
     public BlackScholes(UnderlyingAsset underlying, OptionElements option) {
         super(underlying, option);
         modelName="Black-Scholes";
-        option.setExerciseType('E');
+        //option.setExerciseType('E');
     }
 
-    public Imodelable run(){
+    public Modelable run(){
         startTime = System.currentTimeMillis();
         double q=0;
 
@@ -60,6 +60,10 @@ public class BlackScholes extends AbstractModel {
         elapsedTime= System.currentTimeMillis()-startTime;
         return this ;
     }
+//    @Override
+//    public double getVega(){
+//        return vega;
+//    }
 
     @Override
     public double getPrimaWithThisVlt(double vlt){

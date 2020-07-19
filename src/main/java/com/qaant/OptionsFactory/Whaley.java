@@ -12,7 +12,7 @@ public class Whaley extends BlackScholes {
 
     }
 
-    public Imodelable run(){
+    public Modelable run(){
         startTime = System.currentTimeMillis();
         //genera una opcion black scholes para las greeks
         super.run();
@@ -21,10 +21,11 @@ public class Whaley extends BlackScholes {
                 || option.getOptionType() == OptionElements.PUT) {
             reallyWhaleyModel();
         }
+        elapsedTime= System.currentTimeMillis()-startTime;
         return this;
     }
-    public Imodelable reallyWhaleyModel(){
-        option.setExerciseType('A');
+    public Modelable reallyWhaleyModel(){
+
         double q=0;
 
         switch (underlying.getTipoContrato()){
@@ -45,7 +46,7 @@ public class Whaley extends BlackScholes {
 
         double s1 = strike;
         double zz = 1 / Math.sqrt(2 * Math.PI);
-        double zerror = 1;
+        double zerror ;
         double d1;
         double xx;
         double corr;
@@ -60,7 +61,7 @@ public class Whaley extends BlackScholes {
             corr = s1 / lambda * xx;
 
             UnderlyingAsset und = new UnderlyingAsset(s1, modelVlt, divYield, tipoContrato);
-            Imodelable bsOpt = new BlackScholes(und, opt).run();
+            Modelable bsOpt = new BlackScholes(und, opt).run();
 
             mBSprima = bsOpt.getPrima();
 

@@ -3,7 +3,9 @@ package com.qaant.OptionsFactory;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.solvers.BisectionSolver;
 
-public abstract class AbstractModel implements Imodelable {
+import java.sql.SQLOutput;
+
+public abstract class AbstractModel implements Modelable {
     protected UnderlyingAsset underlying;
     protected OptionElements option;
     protected double prima,delta,gamma,vega,theta,rho;
@@ -24,6 +26,8 @@ public abstract class AbstractModel implements Imodelable {
     protected int steps;
 
     public AbstractModel() {}
+
+
 
     public AbstractModel(UnderlyingAsset underlying, OptionElements option) {
         this.underlying     = underlying;
@@ -49,7 +53,7 @@ public abstract class AbstractModel implements Imodelable {
         derivatives[3] = vega;
         derivatives[4] = theta;
         derivatives[5] = rho;
-        derivatives[9]= elapsedTime;
+        derivatives[9] = elapsedTime;
 
         return derivatives;
     }
@@ -70,8 +74,8 @@ public abstract class AbstractModel implements Imodelable {
     }
     @Override
     public double getVega() {
-        return vega;
-    }
+        return vega;}
+
     @Override
     public double getTheta() {
         return theta;
@@ -88,22 +92,53 @@ public abstract class AbstractModel implements Imodelable {
         return option;
     }
 
+    public int getSteps() {
+        return steps;
+    }
+
     @Override
     public double getImpliedVltVega(){
-       return modelVlt+ (option.getOptionMktPrice()-prima)/vega/100;
+       // System.out.println("----Vega-----"+getVega());
+       return modelVlt+ (option.getOptionMktPrice()-prima)/getVega()/100;
+
     }
     @Override
     public double getImpliedVlt(){
+        //very turbo model
         double optMktPrice;
         optMktPrice=option.getOptionMktPrice();
+        //System.out.println("Opt Mkt Price...:"+optMktPrice+" Prima :"+prima);
         if (optMktPrice!=0) {
             double ivVega = getImpliedVltVega();
 
-            double ivMin = ivVega * 0.95;
+            //toma inicalmente un rango +/- del 5% de la vlt sugerida por vega
+            //comprueba si hay cambio de signo, si no lo hay amplia el rango un 20% para cada lado
+            double ivMin = ivVega * .95;
             double ivMax = ivVega * 1.05;
+           // double dif=0;
+            double dif= getPrimaWithThisVlt(ivMin)-optMktPrice;
+            if(dif>=0) {
+                //bajar ivMin
+                while (dif >= 0) {
+
+                    ivMin *= .80;
+                    dif = getPrimaWithThisVlt(ivMin) - optMktPrice;
+                  //  System.out.println("----IV min---:" + ivMin + " Dif :" + dif);
+                }
+            }else {
+                //subir ivMax
+                dif = optMktPrice - getPrimaWithThisVlt(ivMax);
+                while (dif >= 0) {
+                    ivMax *= 1.20;
+                    dif = optMktPrice - getPrimaWithThisVlt(ivMax);
+                  //  System.out.println("----IV max---:" + ivMax + " Dif :" + dif);
+                }
+
+            }
+           // System.out.println("Entrando al algo con min y max :"+ivMin+" "+ivMax);
             //System.out.println("ivVega :"+ivVega+", min :"+ivMin+", max :"+ivMax);
             UnivariateFunction f = xVlt -> option.getOptionMktPrice() - getPrimaWithThisVlt(xVlt);
-            BisectionSolver solver = new BisectionSolver(0.000001);
+            BisectionSolver solver = new BisectionSolver(0.00001);
 
             return (solver.solve(100, f, ivMin, ivMax));
         }else{
@@ -117,7 +152,7 @@ public abstract class AbstractModel implements Imodelable {
         return getImpliedVlt();
     }
 
-/*
+
     public double getImpliedVlt2(){
         UnivariateFunction f = xVlt -> option.getOptionMktPrice()- getPrimaWithThisVlt(xVlt);
 
@@ -133,10 +168,10 @@ public abstract class AbstractModel implements Imodelable {
         }
 
         BisectionSolver solver= new BisectionSolver(0.00001); //precision()
-        double impliedVol=solver.solve(100, f, ivMin,ivMax); //max iteration, funcion,min, max
-        return impliedVol;
+        return solver.solve(100, f, ivMin,ivMax); //max iteration, funcion,min, max
+
     }
-*/
+
     abstract double getPrimaWithThisVlt(double vlt);
     //Esta func la reseulve cada modelo
 
@@ -144,6 +179,7 @@ public abstract class AbstractModel implements Imodelable {
     public String toString() {
         return "AbstractModel{" +
                 "modelName='" + modelName + '\'' +
+                " exercise="+tipoEjercicio+
                 ", prima=" + prima +
                 ", delta=" + delta +
                 ", gamma=" + gamma +
@@ -159,6 +195,7 @@ public abstract class AbstractModel implements Imodelable {
                 ", optionType=" + optionType +
                 ", optionMktPrice=" + option.getOptionMktPrice() +
                 ", steps="+steps+
+                ", millis="+elapsedTime+
                 '}';
     }
 
